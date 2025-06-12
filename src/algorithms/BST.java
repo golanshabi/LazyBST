@@ -1,4 +1,4 @@
-class BST {
+public class BST {
     class Node {
         final int key;
         volatile Node right;
@@ -15,7 +15,16 @@ class BST {
     final Node root = new Node(Integer.MIN_VALUE);
 
     boolean contains(int key) {
-        // IMPLEMENT
+        Node curr = root;
+        while (curr != null) {
+            if (curr.key == key) {
+                return !curr.marked;
+            } else if (curr.key < key) {
+                curr = curr.right;
+            } else {
+                curr = curr.left;
+            }
+        }
         return false;
     }
 
@@ -25,6 +34,30 @@ class BST {
 
     boolean validate(Node pred, Node curr) {
         return !pred.marked && !curr.marked && (pred.right == curr || pred.left == curr);
+    }
+
+    public boolean checkBSTProperty() {
+        return checkBSTProperty(root.left) && checkBSTProperty(root.right);
+    }
+    
+    private boolean checkBSTProperty(Node node) {
+        if (node == null || node.marked) {
+            return true;
+        }
+        
+        if (node.left != null && !node.left.marked) {
+            if (node.left.key >= node.key || !checkBSTProperty(node.left)) {
+                return false;
+            }
+        }
+        
+        if (node.right != null && !node.right.marked) {
+            if (node.right.key <= node.key || !checkBSTProperty(node.right)) {
+                return false;
+            }
+        }
+        
+        return true;
     }    
 
     boolean add(int key) {
