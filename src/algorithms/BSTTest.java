@@ -13,6 +13,7 @@ public class BSTTest {
         testMultipleInsertions();
         testTreeStructure();
         testEdgeCases();
+        testRemove();
         
         System.out.println("\nAll tests completed!");
     }
@@ -118,6 +119,32 @@ public class BSTTest {
         assert result4 : "Should handle negative numbers";
         
         System.out.println("✓ Edge cases handled correctly");
+    }
+
+    public void testRemove() {
+        System.out.println("Test: Remove Functionality");
+        BST bst = new BST();
+
+        // Add elements
+        bst.add(100);
+        bst.add(200);
+        bst.add(150);
+        bst.add(300);
+        bst.add(250);
+        bst.add(400);
+        bst.add(500);
+        bst.add(350);
+        bst.add(325);
+        bst.add(337);
+        bst.add(330);
+        bst.add(340);
+
+        // Remove an element
+        boolean result1 = bst.remove(300);
+        assert result1 : "Should return true when removing existing element";
+        checkBSTProperty(bst, "after removing 300");
+
+        System.out.println("✓ Remove functionality works correctly");
     }
     
     // Helper method to check BST property after operations
