@@ -116,11 +116,16 @@ public class BST {
                 if (biggest_in_smallest_subtree.right != null || biggest_in_smallest_subtree.marked)
                     return false;
 
-                pred.right = smallest_in_right;
-                smallest_in_right.left = curr.left;
-                biggest_in_smallest_subtree.right = curr.right;
-                smallest_pred.left = null;
-                return true;
+                synchronized (smallest_pred) {
+                    if (smallest_pred.marked)
+                        return false;
+
+                    smallest_in_right.left = curr.left;
+                    biggest_in_smallest_subtree.right = curr.right;
+                    pred.right = smallest_in_right;
+                    smallest_pred.left = null;
+                    return true;
+                }
             }
         }
     }
@@ -153,13 +158,18 @@ public class BST {
                 if (smallest_in_biggest_subtree.left != null || smallest_in_biggest_subtree.marked)
                     return false;
 
-                pred.left = biggest_in_left;
-                biggest_in_left.right = curr.right;
-                smallest_in_biggest_subtree.left = curr.left;
-                // this is true for everyone except curr, but if biggest_pred == curr,
-                // then we don't really care about biggest_pred since curr will now be removed
-                biggest_pred.right = null;
-                return true;
+                synchronized (biggest_pred) {
+                    if (biggest_pred.marked)
+                        return false;
+
+                    biggest_in_left.right = curr.right;
+                    smallest_in_biggest_subtree.left = curr.left;
+                    pred.left = biggest_in_left;
+                    // this is true for everyone except curr, but if biggest_pred == curr,
+                    // then we don't really care about biggest_pred since curr will now be removed
+                    biggest_pred.right = null;
+                    return true;
+                }
             }
         }
     }
