@@ -7,19 +7,17 @@ import main.BSTInterface;
 
 public class BST implements BSTInterface {
     class Node {
-        final int key;
+        volatile int key;
         volatile Node right;
         volatile Node left;
         volatile boolean marked;
         volatile int generation;
-        volatile boolean is_bad;
         public Node(int key) { // Node constructor
             this.key = key;
             this.left = null;
             this.right = null;
             this.marked = false;
             this.generation = 0;
-            this.is_bad = false;
         }
     }
 
@@ -43,9 +41,6 @@ public class BST implements BSTInterface {
         Node pred = null;
 
         while (curr != null) {
-            if (curr.is_bad) {
-                return null;
-            }
             if (curr.key == key) {
                 if (curr.generation > searchGeneration) {
                     return null;
@@ -88,9 +83,6 @@ public class BST implements BSTInterface {
 
     boolean validate(Node pred, Node curr, boolean allow_pred_marked) {
         boolean result = (allow_pred_marked || !pred.marked) && !curr.marked && (pred.right == curr || pred.left == curr);
-        // if (!result) {
-            // System.out.println("validate_pred.marked=" + pred.marked + " curr.marked=" + curr.marked + " pred.right=" + pred.right + " pred.left=" + pred.left + " curr=" + curr);
-        // }
         return result;
     }
 
@@ -129,7 +121,6 @@ public class BST implements BSTInterface {
             synchronized(pred) {
                 if (validateLeaf(pred, key)) {
                     Node node = new Node(key);
-                    // System.out.println("inserting node=" + node + " pred=" + pred);
                     if (key < pred.key) {
                         pred.left = node;
                     } else {
@@ -142,29 +133,24 @@ public class BST implements BSTInterface {
     }
 
     public boolean insert(final int key) {
-        // System.out.println("insert_start");
         boolean result = insertInternal(key);
         if (result) {
             size.incrementAndGet();
             keysum.addAndGet(key);
         }
-        // System.out.println("insert_end");
-
         return result;
     }
 
     private boolean removeRight(Node pred, Node curr) {
-        if (pred.right != curr) {
-            // System.out.println("pred.right != curr");
-        }
-        // System.out.println("removeRight_start");
         if (curr.left == null) {
+            curr.marked = true;
             pred.generation = Integer.max(pred.generation, curr.generation);
             pred.right = curr.right;
             return true;
         }
 
         if (curr.right == null) {
+            curr.marked = true;
             pred.generation = Integer.max(pred.generation, curr.generation);
             pred.right = curr.left;
             return true;
@@ -178,33 +164,15 @@ public class BST implements BSTInterface {
             smallest_in_right = smallest_in_right_next;
             smallest_in_right_next = smallest_in_right.left;
         }
-
-        Node swap_node = new Node(smallest_in_right.key);
-        swap_node.right = curr.right;
-        swap_node.left = curr.left;
-        // if (swap_node.left == smallest_in_right || swap_node.right == smallest_in_right) {
-        //     System.out.println("FUCK swap_node.left=" + swap_node.left + " swap_node.right=" + swap_node.right + " smallest_in_right=" + smallest_in_right);
-        //     System.exit(1);
-        // }
-
-        if (swap_node.left == smallest_in_right) {
-            swap_node.left = null;
-        }
-        if (swap_node.right == smallest_in_right) {
-            swap_node.right = smallest_in_right.right;
-        }
-        
         
         synchronized (smallestPred) {
             synchronized (smallest_in_right) {
                 if (!validate(smallestPred, smallest_in_right, curr == smallestPred) || smallest_in_right.left != null) {
-                    // if (smallest_in_right.marked) {
-                    //     System.out.println("marked smallest_in_right=" + smallest_in_right + " smallestPred=" + smallestPred + " curr=" + curr + " smallest_in_right.left=" + smallest_in_right.left + " smallest_in_right.right=" + smallest_in_right.right);
-                    // }
-                    // System.out.println("removeRight_validation_failed smallest_in_right.left=" + smallest_in_right.left);
                     return false; // validation failed, retry
                 }
-                pred.right = swap_node;
+
+
+                curr.key = smallest_in_right.key;
 
                 int changeGeneration = this.generation.incrementAndGet();
                 if (smallest_in_right.right != null) {
@@ -214,28 +182,29 @@ public class BST implements BSTInterface {
                 }
 
                 // remove smallest in right from the tree
+                smallest_in_right.marked = true;
+
                 if (curr != smallestPred) {
                     smallestPred.left = smallest_in_right.right;
+                } else {
+                    curr.right = smallest_in_right.right;
                 }
-
-                // smallest_in_right.is_bad = true;
-                // smallest_in_right.right = null;
-                // smallest_in_right.left = null;
             }
         }
-        // System.out.println("removeRight_end");
         return true;
     }
 
     private boolean removeLeft(Node pred, Node curr) {
         if (curr.left == null)
         {
+            curr.marked = true;
             pred.generation = Integer.max(pred.generation, curr.generation);
             pred.left = curr.right;
             return true;
         }
 
         if (curr.right == null) {
+            curr.marked = true;
             pred.generation = Integer.max(pred.generation, curr.generation);
             pred.left = curr.left;
             return true;
@@ -250,29 +219,13 @@ public class BST implements BSTInterface {
             biggest_in_left_next = biggest_in_left.right;
         }
 
-        Node swap_node = new Node(biggest_in_left.key);
-        swap_node.left = curr.left;
-        swap_node.right = curr.right;
-        // if (swap_node.left == biggest_in_left || swap_node.right == biggest_in_left) {
-            // System.out.println("FUCK swap_node.left=" + swap_node.left + " swap_node.right=" + swap_node.right + " biggest_in_left=" + biggest_in_left);
-            // System.exit(1);
-        // }
-        if (swap_node.left == biggest_in_left) {
-            swap_node.left = biggest_in_left.left;
-        }
-        if (swap_node.right == biggest_in_left) {
-            swap_node.right = null;
-        }
-
         synchronized (biggestPred) {
             synchronized (biggest_in_left) {
                 if (!validate(biggestPred, biggest_in_left, curr == biggestPred) || biggest_in_left.right != null) {
-                    // if (biggest_in_left.marked) {
-                    //     System.out.println("marked biggest_in_left=" + biggest_in_left + " biggestPred=" + biggestPred + " curr=" + curr + " biggest_in_left.left=" + biggest_in_left.left + " biggest_in_left.right=" + biggest_in_left.right);
-                    // }
                     return false; // validation failed, retry
                 }
-                pred.left = swap_node;
+
+                curr.key = biggest_in_left.key;
 
                 int changeGeneration = this.generation.incrementAndGet();
                 if (biggest_in_left.left != null) {
@@ -282,13 +235,13 @@ public class BST implements BSTInterface {
                 }
 
                 // remove biggest in left from the tree
+                biggest_in_left.marked = true;
+
                 if (curr != biggestPred) {
                     biggestPred.right = biggest_in_left.left;
+                } else {
+                    curr.left = biggest_in_left.left;
                 }
-                // System.out.println("biggestPred.left=" + biggestPred.left + " biggestPred.right=" + biggestPred.right + " biggest_in_left=" + biggest_in_left + " biggestPred=" + biggestPred);
-                // biggest_in_left.is_bad = true;
-                // biggest_in_left.right = null;
-                // biggest_in_left.left = null;
             }
         }
 
@@ -296,64 +249,26 @@ public class BST implements BSTInterface {
     }
 
     private boolean removeInternal(final int key) {
-        int i = 1;
         while (true) {
-            // System.out.println("remove_find_start");
             FindResult res = find(key);
-            // System.out.println("remove_find_end");
 
             if (res.curr == null || res.curr.marked) {
                 return false;
             }
 
-            // System.out.println("remove_sync_start");
             Node pred = res.pred;
             Node curr = res.curr;
-            if (i % 1000 == 0) {
-                System.out.println("removing pred=" + pred + " curr=" + curr + " curr.left=" + curr.left + " curr.right=" + curr.right);
-            }
-            i++;
 
-            // System.out.println("curr=" + curr);
             synchronized (pred) {
-                // System.out.println("remove_sync_end");
-                // System.out.println("remove_sync_start");
                 synchronized (curr) {
-                    // System.out.println("remove_sync_end");
                     if (!validate(pred, curr, false))
                         continue;
 
-                    curr.marked = true;
-
                     if (curr == pred.left) {
-                        // System.out.println("remove_removeLeft_start");
-                        int attempts = 0;
-                        while (!removeLeft(pred, curr)) {
-                            attempts++;
-                            if (attempts % 1000 == 0) {
-                                System.out.println("removeLeft attempt " + attempts);
-                            }
-                        }
-                        if (pred.left == curr || pred.right == curr) {
-                            // System.out.println("pred.left == curr BAD");
-                            System.exit(1);
-                        }
-                        // System.out.println("remove_removeLeft_end");
+                        while (!removeLeft(pred, curr)) {}
                         return true;
                     } else {
-                        // System.out.println("remove_removeRight_start");
-                        int attempts = 0;
-                        while (!removeRight(pred, curr)) {
-                            attempts++;
-                            if (attempts % 1000 == 0) {
-                                System.out.println("removeRight attempt " + attempts);
-                            }
-                        }
-                        if (pred.right == curr || pred.left == curr) {
-                            // System.out.println("pred.right == curr BAD");
-                            System.exit(1);
-                        }
-                        // System.out.println("remove_removeRight_end");
+                        while (!removeRight(pred, curr)) {}
                         return true;
                     }
                 }
@@ -362,13 +277,11 @@ public class BST implements BSTInterface {
     }
 
     public boolean remove(final int key) {
-        // System.out.println("remove_start");
         boolean result = removeInternal(key);
         if (result) {
             size.decrementAndGet();
             keysum.addAndGet(-key);
         }
-        // System.out.println("remove_end");
 
         return result;
     }

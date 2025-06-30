@@ -3,9 +3,7 @@ package algorithms;
 import main.BSTInterface;
 
 public class BSTSimpleTest {
-    public static void main(String[] args) {
-        System.out.println("=== BST Simple Test: Adding 3, 2, 1, 0 ===");
-        
+    public static void main(String[] args) {        
         // Create a new BST instance
         BSTInterface bst = new BST();
         
@@ -18,5 +16,6 @@ public class BSTSimpleTest {
         bst.insert(-1);
 
         bst.remove(2);
+        System.out.println("BST size: " + bst.size());
     }
 } 
