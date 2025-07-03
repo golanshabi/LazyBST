@@ -42,9 +42,6 @@ public class BST implements BSTInterface {
 
         while (curr != null) {
             if (curr.key == key) {
-                if (curr.generation > searchGeneration) {
-                    return null;
-                }    
                 break;
             } else if (curr.key < key) {
                 pred = curr;
